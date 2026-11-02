@@ -1,8 +1,10 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import { useRouter } from "next/navigation";
 import { Bricolage_Grotesque, DM_Sans } from "next/font/google";
 import Navbar from "@/app/components/Navbar";
+import { createClient } from "@/lib/supabase/client";
 
 const display = Bricolage_Grotesque({
   subsets: ["latin"],
@@ -11,10 +13,12 @@ const display = Bricolage_Grotesque({
 const body = DM_Sans({ subsets: ["latin"], weight: ["400", "500"] });
 
 export default function LoginPage() {
+  const router = useRouter();
+  const supabase = createClient();
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [remember, setRemember] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -24,18 +28,22 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      // TODO : remplace par ton appel API ou ta fonction d'auth
-      const res = await fetch("/api/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password, remember }),
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
       });
 
-      if (!res.ok) {
+      if (error) {
+        if (error.code === "email_not_confirmed") {
+          throw new Error(
+            "Votre e-mail n'est pas encore confirmé. Vérifiez votre boîte mail."
+          );
+        }
         throw new Error("E-mail ou mot de passe incorrect.");
       }
 
-      window.location.href = "/";
+      router.push("/");
+      router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Une erreur est survenue.");
     } finally {
@@ -118,16 +126,6 @@ export default function LoginPage() {
                 </button>
               </div>
             </div>
-
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={remember}
-                onChange={(e) => setRemember(e.target.checked)}
-                className="h-4 w-4 rounded border-[#0F3D3A]/40 accent-[#0F3D3A]"
-              />
-              Rester connecté
-            </label>
 
             <button
               type="submit"
